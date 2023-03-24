@@ -364,7 +364,7 @@ createODK = function(path, combine_views=data.table::data.table(),
 ###################### GENERATING SQL QUERIES #######################
 
 setMethod('genSQLBase', 'XLSForm',
-          function(.Object, schema, view_name, startdate=NULL, enddate=NULL,
+          function(.Object, schema, view_name, startdate, enddate,
                    view_prefix='', filter_version_sql=F,
                    source_table='openhds.form_submission',
                    distinct_on=NULL, sm_exclude=vector('character', length=0)){
@@ -858,7 +858,8 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
 #' @aliases genSQL
 #' @export
 
-setMethod('genSQL', 'XLSForm', function(.Object, schema, view_name, startdate, enddate,
+setMethod('genSQL', 'XLSForm', function(.Object, schema, view_name,
+                                        startdate=NULL, enddate=NULL,
                                         base=F, view_prefix='',
                                         filter_version_sql=F,
                                         source_table='openhds.form_submission',
