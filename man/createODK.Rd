@@ -38,7 +38,8 @@ for the SQL view column names.}
 \item{exclude_cols}{Character vector listing the names of questions that should be excluded from the view.
 Lines in the XLSForm with type note, or which begin/end a repeat or group are automatically excluded as separate variables from SQL views.}
 
-\item{calc_types}{Character vector mapping the name of calculate fields to the type to be used in the SQL statement}
+\item{calc_types}{Character vector mapping the name of calculate fields to the type to be used in the SQL statement.
+Calculate fields not present in this vector default to \code{calc_default}.}
 
 \item{calc_default}{The default type to be used for calculate fields, when they do not appear in \code{calc_types}.}
 

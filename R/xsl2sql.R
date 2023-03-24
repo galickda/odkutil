@@ -364,7 +364,7 @@ createODK = function(path, combine_views=data.table::data.table(),
 ###################### GENERATING SQL QUERIES #######################
 
 setMethod('genSQLBase', 'XLSForm',
-          function(.Object, schema, view_name, startdate, enddate,
+          function(.Object, schema, view_name, startdate=NULL, enddate=NULL,
                    view_prefix='', filter_version_sql=F,
                    source_table='openhds.form_submission',
                    distinct_on=NULL, sm_exclude=vector('character', length=0)){
@@ -426,9 +426,13 @@ setMethod('genSQLBase', 'XLSForm',
                    '\nWHERE form_id=\'', form_id, '\'',
                    ifelse(filter_version_sql==T,
                           paste0(' AND form_version=\'', form_version, '\''),
-                          ''),'
-                    AND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\'
-                    AND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';')
+                          ''),
+                   ifelse(!is.null(startdate),
+                          paste0('\nAND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\''),
+                          ''),
+                   ifelse(!is.null(enddate),
+                          paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';'),
+                          ''))
           })
 
 
@@ -560,12 +564,14 @@ setMethod('genSQLRepeatLevel1_combine', 'XLSForm',
                             'WHERE form_id=\'', form_id, '\'',
                             ifelse(filter_version_sql==T,
                                    paste0(' AND form_version=\'', form_version, '\''),
-                                   ''),'
-                            AND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\'
-                           AND collected::date < \'', format(enddate, '%Y-%m-%d'), '\'')
-                   }),
-                   collapse='\n\nUNION ALL\n\n'),
-                   ';')
+                                   ''),
+                            ifelse(!is.null(startdate),
+                                   paste0('\nAND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\''),
+                                   ''),
+                            ifelse(!is.null(enddate),
+                                   paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';'),
+                                   ''))
+                   })))
           })
 
 
@@ -681,9 +687,13 @@ setMethod('genSQLRepeatLevel1', 'XLSForm',
                           WHERE form_id=\'', form_id, '\'',
                    ifelse(filter_version_sql==T,
                           paste0(' AND form_version=\'', form_version, '\''),
-                          ''),'
-                          AND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\'
-                         AND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';')
+                          ''),
+                   ifelse(!is.null(startdate),
+                          paste0('\nAND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\''),
+                          ''),
+                   ifelse(!is.null(enddate),
+                          paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';'),
+                          ''))
           })
 
 
@@ -736,9 +746,13 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
                                      '\nWHERE form_id=\'', form_id, '\'',
                             ifelse(filter_version_sql==T,
                                    paste0(' AND form_version=\'', form_version, '\''),
-                                   ''),'
-                                     AND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\'
-                                     AND collected::date < \'', format(enddate, '%Y-%m-%d'), '\'',
+                                   ''),
+                            ifelse(!is.null(startdate),
+                                   paste0('\nAND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\''),
+                                   ''),
+                            ifelse(!is.null(enddate),
+                                   paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';'),
+                                   ''),
                             ')\n')
             mainquery=paste(sapply(.Object@survey[repeat_depth==2,unique(repeat_parent)],
                                    function(rpt){
@@ -824,8 +838,10 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
 #' @param view_name Name of the view to create within `schema`.
 #' For repeats this should match the name of the repeat or the `view` column in `combine_views` for [createODK()].
 #' Cannot be specified for `genSQLAll`, only for `genSQL`.
-#' @param startdate The start date of the period for which forms should be included in this view
+#' @param startdate The start date of the period for which forms should be included in this view.
+#' If NULL date period has no begin date
 #' @param enddate The end date of the period for which forms should be included in this view
+#' If NULL date period has no end date
 #' @param base Whether this is a call to generate the base query (`TRUE`) or a repeat query (`FALSE`).
 #' Can only be specified in `genSQL`, but not in `genSQLAll`
 #' @param view_prefix The prefix to add to the view name. Especially useful when creating views for repeats

@@ -32,7 +32,7 @@
   filter_version_sql = F,
   source_table = "openhds.form_submission",
   distinct_on = NULL,
-  sm_exclude = sm_exclude
+  sm_exclude = vector("character", length = 0)
 )
 }
 \arguments{
@@ -44,9 +44,11 @@
 For repeats this should match the name of the repeat or the \code{view} column in \code{combine_views} for \code{\link[=createODK]{createODK()}}.
 Cannot be specified for \code{genSQLAll}, only for \code{genSQL}.}
 
-\item{startdate}{The start date of the period for which forms should be included in this view}
+\item{startdate}{The start date of the period for which forms should be included in this view.
+If NULL date period has no begin date}
 
-\item{enddate}{The end date of the period for which forms should be included in this view}
+\item{enddate}{The end date of the period for which forms should be included in this view
+If NULL date period has no end date}
 
 \item{base}{Whether this is a call to generate the base query (\code{TRUE}) or a repeat query (\code{FALSE}).
 Can only be specified in \code{genSQL}, but not in \code{genSQLAll}}
