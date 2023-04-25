@@ -241,7 +241,9 @@ setMethod('configureViews', 'XLSForm',
               data.table:::set(.Object@survey, j=paste0('include_', v),
                                value= .Object@survey[,(grepl(v,repeat_view)|
                                                          (name %in% names(include_cols) &
-                                                            include_cols[name] %in% c('always', v)))])
+                                                            ifelse(length(include_cols)>0,
+                                                                   include_cols[name],
+                                                                   '') %in% c('always', v)))])
             }
 
 
