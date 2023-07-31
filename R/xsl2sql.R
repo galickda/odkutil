@@ -239,11 +239,17 @@ setMethod('configureViews', 'XLSForm',
             repeat_views= .Object@survey[repeat_depth>0,unique(repeat_view)]
             for(v in repeat_views){
               data.table:::set(.Object@survey, j=paste0('include_', v),
-                               value= .Object@survey[,(grepl(v,repeat_view)|
-                                                         (name %in% names(include_cols) &
-                                                            ifelse(length(include_cols)>0,
-                                                                   include_cols[name],
-                                                                   '') %in% c('always', v)))])
+                               value = apply(.Object@survey, 1,
+                                              function(r){
+                                                n=as.character(r['name'])
+                                                if (r['repeat_view'] %in% c(v)) {
+                                                  T
+                                                } else if (length(include_cols)==0 | !n %in% names(include_cols)){
+                                                  F
+                                                } else{
+                                                  any(c('always', v) %in% unlist(include_cols[n]))
+                                                }
+                                              }))
             }
 
 
@@ -263,8 +269,8 @@ setMethod('configureViews', 'XLSForm',
 # Main initializer for the class
 setMethod('initialize', 'XLSForm',
           function(.Object, path,
-                   combine_views=data.table::data.table(), include_cols=NULL, change_names=NULL,
-                   exclude_cols=NULL){
+                   combine_views=data.table::data.table(), include_cols=list('instanceID'='always'),
+                   change_names=NULL, exclude_cols=NULL){
   .Object@path <- path
   surv=data.table::data.table(openxlsx::read.xlsx(path, sheet='survey'))
   coltoget=grep('type|name|label', colnames(surv), value=T)
@@ -303,7 +309,7 @@ setMethod('calculateTypes', 'XLSForm',
                                                  grepl('float', type), 'numeric',
                                                  grepl('calculate', type),
                                                  data.table::fifelse(name %in% names(calc_types),
-                                                                     as.character(calc_types)[name],
+                                                                     as.character(calc_types[name]),
                                                                      calc_default),
                                                  default=type_default)]
 
@@ -329,7 +335,7 @@ setMethod('subsetView', 'XLSForm', function(.Object, repeat_view_name){
 #' - `name_old`: Name of the question as programmed in the ODK XLSForm
 #' - `name_new`: Name of the column that should contain this question in the view
 #' - `repeat_id`: Name of the repeat as it should be entered in the column defined by `repeat_name_col`
-#' @param include_cols Character vector mapping origin question names to views these questions should be included in.
+#' @param include_cols List mapping origin question names to (character vector of) views these questions should be included in.
 #' Values should be `'always'` or the name of a repeat or view as defined in `combine_views` and/or the ODK XLSForm.
 #' @param change_names Character vector mapping original question names to the names that should be used
 #' for the SQL view column names.
@@ -660,7 +666,7 @@ setMethod('genSQLRepeatLevel1', 'XLSForm',
                          collapse=',\n'),
                    '\nFROM openhds.form_submission,',
                    '\nLATERAL jsonb_to_recordset(',
-                   .Object@repeats[name==.Object@survey[!is.na(repeat_parent),unique(repeat_parent,)],
+                   .Object@repeats[name==view_name,
                                    path_repeat],
                    ')
                           r(',
@@ -736,7 +742,7 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
                             ifelse(!is.null(distinct_on),
                                    distinct_on_sql,
                                    ''),
-                            paste(paste('(', .Object@survey[repeat_depth==0, path],
+                            paste0(paste('(', .Object@survey[repeat_depth==0, path],
                                         ')::', .Object@survey[repeat_depth==0, postgres_type],
                                         'as',
                                         .Object@survey[repeat_depth==0, newname]),
@@ -753,12 +759,12 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
                                    paste0('\nAND collected::date >= \'', format(startdate, '%Y-%m-%d'),'\''),
                                    ''),
                             ifelse(!is.null(enddate),
-                                   paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\';'),
+                                   paste0('\nAND collected::date < \'', format(enddate, '%Y-%m-%d'), '\''),
                                    ''),
                             ')\n')
             mainquery=paste(sapply(.Object@survey[repeat_depth==2,unique(repeat_parent)],
                                    function(rpt){
-                                     if(is.null(view_cols)){ # we aren't combining with other views
+                                     if(is.null(view_cols) | !rpt %in% .Object@combine_views$repeat_name){ # we aren't combining with other views
                                        cols_to_pull=paste(
                                          # nodes in the parent repeat
                                          c(paste('element',
@@ -809,22 +815,21 @@ setMethod('genSQLRepeatLevel2', 'XLSForm',
                                             .Object@repeats[name==rpt,repeat_relative_path_asjson],
                                             ')\n',
                                             'l_', rpt, '(\"',
-                                            paste0(
-                                              paste0(.Object@survey[repeat_parent==rpt &
-                                                                 repeat_depth==2,
-                                                               data.table::fifelse(repeat_parent==direct_parent,
-                                                                      name,
-                                                                      direct_parent)],
-                                                     '\" text'),
+                                            paste0(.Object@survey[repeat_parent==rpt & repeat_depth==2,
+                                                                  unique(
+                                                                    data.table::fifelse(repeat_parent==direct_parent,
+                                                                                        paste0(name, '\" text'),
+                                                                                        paste0(direct_parent, '\" jsonb')))],
                                               collapse=', \"'),
-                                            ')\n'
+                                            ')'
                                      )
                                    }))
             # put the view creation command together
             paste0('CREATE OR REPLACE VIEW \"', schema, '\".', view_prefix, view_name,
                    ' AS\n',
                    subquery,
-                   paste(mainquery, collapse='\nUNION ALL\n\n'))
+                   paste(mainquery, collapse='\n\nUNION ALL\n\n'),
+                   ';')
           })
 
 

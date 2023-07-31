@@ -29,7 +29,7 @@ but should be combined into the same column in a single view. Should be a data.t
 \item \code{repeat_id}: Name of the repeat as it should be entered in the column defined by \code{repeat_name_col}
 }}
 
-\item{include_cols}{Character vector mapping origin question names to views these questions should be included in.
+\item{include_cols}{List mapping origin question names to (character vector of) views these questions should be included in.
 Values should be \code{'always'} or the name of a repeat or view as defined in \code{combine_views} and/or the ODK XLSForm.}
 
 \item{change_names}{Character vector mapping original question names to the names that should be used
